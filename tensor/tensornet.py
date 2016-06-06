@@ -24,6 +24,7 @@ import datetime
 import inputdata
 import logging
 import IPython
+#import Analysis from analysis
 import numpy as np
 try:
     import options
@@ -38,6 +39,7 @@ class TensorNet():
     def __init__(self):
         self.test_loss = 0
         self.train_loss = 0
+        self.analysis = Analysis()
         raise NotImplementedError
 
     def save(self, sess, save_path=None):
@@ -71,7 +73,7 @@ class TensorNet():
         return sess
 
 
-    def optimize(self, iterations, data, path=None, batch_size=100, test_print=20, save=False):
+    def optimize(self, iterations, data, unbiased=False, path=None, batch_size=100, test_print=20, save=False):
         """
             optimize net for [iterations]. path is either absolute or 
             relative to current working directory. data is InputData object (see class for details)
@@ -93,28 +95,41 @@ class TensorNet():
         try:
             with self.sess.as_default():
                 for i in range(iterations):
-                    batch = data.next_train_batch(batch_size)
-                    ims, labels = batch
+                    if(not unbiased):
+                        batch = data.next_train_batch(batch_size)
+                        ims, labels = batch
                     
-                    feed_dict = { self.x: ims, self.y_: labels }
-                    if i % 3 == 0:
+                        feed_dict = { self.x: ims, self.y_: labels }
+                    else:
+                        batch = data.next_w_train_batch(batch_size,self,debug = True,resamp = i %40 == 0)
+                        ims, labels, weights = batch
+                    
+                        feed_dict = { self.x: ims, self.y_: labels, self.weights: weights }
+
+                    if i % 10 == 0:
                         batch_loss = self.acc.eval(feed_dict=feed_dict)
+                        
                         self.log("[ Iteration " + str(i) + " ] Training loss: " + str(batch_loss))
+                        
                     if i % test_print == 0:
                         test_batch = data.next_test_batch()
                         test_ims, test_labels = test_batch
                         test_dict = { self.x: test_ims, self.y_: test_labels }
-                        test_loss = self.acc.eval(feed_dict=test_dict)
-                        self.log("[ Iteration " + str(i) + " ] Test loss: " + str(test_loss))
+                        #test_loss = self.acc.eval(feed_dict=test_dict)
+                        #self.log("[ Iteration " + str(i) + " ] Test loss: " + str(test_loss))
                     self.train.run(feed_dict=feed_dict)
+
+
+                    # if( i% 5 == 0):
+                    #     analysis.show(weights)
                 
 
         except KeyboardInterrupt:
             pass
 
-        self.test_loss = test_loss
-        self.train_loss = batch_loss
-        
+        self.test_loss = 0#test_loss
+        self.train_loss = 0#batch_loss
+        batch = data.next_w_train_batch(batch_size,self,debug = True,resamp = True)
      
         
         if save:
@@ -142,6 +157,8 @@ class TensorNet():
         #state = state[0]
         A = self.sess.run(self.y_out, feed_dict={self.x:state}) [0]
         return np.argmax(A)-1
+    def dist(self,state):
+        return self.sess.run(self.y_out, feed_dict={self.x:state}) [0]
     
     def get_stats(self):
         return [self.test_loss, self.train_loss]
@@ -160,6 +177,7 @@ class TensorNet():
 
             else:
                 return sess.run(self.y_out, feed_dict={self.x:im}) [0]
+
 
 
     def class_dist(self,sess,im,channels=3):
