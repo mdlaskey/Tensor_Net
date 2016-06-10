@@ -101,7 +101,7 @@ class TensorNet():
                     
                         feed_dict = { self.x: ims, self.y_: labels }
                     else:
-                        batch = data.next_w_train_batch(batch_size,self,debug = True,resamp = i %40 == 0)
+                        batch = data.next_w_train_batch(batch_size,self,debug = False,resamp = i %50 == 0)
                         ims, labels, weights = batch
                     
                         feed_dict = { self.x: ims, self.y_: labels, self.weights: weights }
@@ -129,7 +129,8 @@ class TensorNet():
 
         self.test_loss = 0#test_loss
         self.train_loss = 0#batch_loss
-        batch = data.next_w_train_batch(batch_size,self,debug = True,resamp = True)
+        #data.plotter.plot_net_state_actions(self)
+        #batch = data.next_w_train_batch(batch_size,self,debug = True,resamp = True)
      
         
         if save:

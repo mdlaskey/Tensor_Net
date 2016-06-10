@@ -40,7 +40,7 @@ class GridNet_UB(TensorNet):
         v = tf.argmax(y_out,1)
         return y_out[:,v]
 
-    def get_weight(self,trajectory):
+    def get_weight(self,trajectory, noise = 0.5):
         T = len(trajectory)
         weight = 1
         #print "T ",T
@@ -52,17 +52,31 @@ class GridNet_UB(TensorNet):
             state = trajectory[t][0]
             state = state+np.zeros([1,2])
             y = trajectory[t][1]
-            v = np.argmax(y)
-          
+            a_taken = trajectory[t][2]
+
+            y = np.argmax(y)
+            a_taken = np.argmax(a_taken)
+
             dist = self.dist(state)
             v_ = np.argmax(dist)
             
-            if(v_ == v):
-                #print t
+            #Noisy Supervisor
+            # if(y == a_taken):
+            #     denom = (1-noise)+noise*(0.2)
+            # else:
+            #     denom = noise*(0.2)
+
+            # weight = weight * dist[a_taken]/denom
+
+            #Supervisor
+            #weight = weight * dist[a_taken]/1.0
+
+            if(y == v_):
+                
                 weight = 1.0*weight
             else:
                 return 0.0
-            #weight = weight*dist[v]/1.0
+           
 
         return weight
 
@@ -87,7 +101,6 @@ class GridNet_UB(TensorNet):
         self.b_fc2 = self.bias_variable([5])
 
         self.y_out = tf.nn.softmax(tf.matmul(self.h_1, self.w_fc2) + self.b_fc2)
-        
         #self.loss = tf.reduce_mean(-tf.reduce_sum(self.y_ * tf.log(self.y_out)*self.weights, reduction_indices=[1]))
         
         self.loss = tf.reduce_mean(-tf.reduce_sum(self.y_ * tf.log(self.y_out), reduction_indices=[1]))

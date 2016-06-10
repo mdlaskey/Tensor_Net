@@ -49,11 +49,14 @@ class GridData_UB(InputData):
         self.w = 15
         self.h = 15 
         self.i = 0
+        self.T = T
         data_c = []
         self.states = []
         self.dist = []
         self.plotter = Plotter()
         self.weights = []
+        self.densities = []
+
         t = 0
         old_traj = []
         #Create a list with each point being the whole trajectory
@@ -93,44 +96,58 @@ class GridData_UB(InputData):
 
     def count_data(self,data, y_s):
         N = data.shape[0]
-        current_density = np.zeros([self.h,self.w])
-        current_count = np.zeros([self.h,self.w])
+        current_density = np.zeros([self.h,self.w,self.T])
+        current_count = np.zeros([self.h,self.w,self.T])
         labels = np.zeros([self.h,self.w])
         for i in range(N):
             x = data[i,0]
             y = data[i,1]
+            t = data[i,3]
           
-            current_density[x,y] = current_density[x,y] +data[i,2]
+            current_density[x,y,t] = current_density[x,y,t] +data[i,2]
             labels[x,y] = self.array_to_action(y_s[i])
 
-            current_count[x,y] = current_count[x,y] + 1.0
+            current_count[x,y,t] = current_count[x,y,t] + 1.0
         
-        for i in range(self.w):
-            for j in range(self.h):
-                if(not current_count[i,j] == 0):
-                    current_density[i,j] = current_density[i,j]/current_count[i,j]
-
-
-  
-        norm = np.sum(current_density)
-        current_density = current_density/norm
-        print current_density
-        return current_density,labels
+        density = np.zeros([self.h,self.w])
+        for t in range(self.T):
+            norm = np.sum(current_density[:,:,t])
+            if(not norm == 0):
+                current_density[:,:,t] = current_density[:,:,t]/norm
+            density = density + current_density[:,:,t]
         
+
+        density = density/np.sum(density)
   
+        
+        
+        return density,labels
+        
+    def follow_the_leader(self):
+        iters = len(self.densities)
+        density = np.zeros([self.h,self.w])
+        for i in range(iters):
+            density = density+self.densities[i]
+
+        density = density/np.sum(density)
+        return density
+
     def get_weights(self,net,data = None):
         if(data == None):
             data = self.whole_data
 
-        weights = np.zeros([len(data),3])
+        weights = np.zeros([len(data),4])
         y_s = []
         for i in range(len(data)):
             weights[i,2] = net.get_weight(data[i])
             weights[i,1] = data[i][0][0][1]
             weights[i,0] = data[i][0][0][0]
+            weights[i,3] = len(data[i]) -1
             y_s.append(data[i][0][1])
 
         current_density,labels = self.count_data(weights,y_s)
+        self.densities.append(current_density)
+        #current_density = self.follow_the_leader()
 
         
         states = []
@@ -150,11 +167,13 @@ class GridData_UB(InputData):
         batch = np.random.choice(len(self.states),p=self.dist,size=n)
         batch = self.states[batch]
 
+
         if(debug and resamp):
             sample = np.random.choice(len(self.states),p=self.dist, size = 500)
             sample = self.states[sample]
             self.plotter.count_data(sample)
             self.plotter.show_states()
+            self.plotter.plot_net_state_actions(net)
 
         weights = np.zeros([n,1])+1.0
 
@@ -232,6 +251,7 @@ class GridData(InputData):
         self.test_tups = []
         self.i = 0
         data_c = []
+        self.plotter = Plotter()
       
         #sort test training
         for i in range(len(data)):
