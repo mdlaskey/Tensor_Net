@@ -49,7 +49,7 @@ class learner():
 		'''
 		pass
 
-class EndNet6Learner(learner):
+class LinNet6Learner(learner):
 
 	def __init__(self, path):
 		self.net = EndNet6.EndNet6()
