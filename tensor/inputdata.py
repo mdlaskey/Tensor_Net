@@ -8,7 +8,6 @@ import IPython
 import sys
 sys.path.append("../")
 
-from plot_class import Plotter
 
 class InputData():
 
@@ -41,6 +40,43 @@ def process_out(n):
 
     return out
 
+
+def im2tensor(im,channels=1):
+    """
+        convert 3d image (height, width, 3-channel) where values range [0,255]
+        to appropriate pipeline shape and values of either 0 or 1
+        cv2 --> tf
+    """
+    shape = np.shape(im)
+    h, w = shape[0], shape[1]
+    zeros = np.zeros((h, w, channels))
+    for i in range(channels):
+        zeros[:,:,i] = im[:,:,i]/255.0
+    return zeros
+
+
+def parse(filepath, stop=-1):
+    """
+        Parses file containing paths and labels into list
+        of tupals in the form of:
+        
+        data =  [ 
+                    (path, [label1, label2 ... ])
+                    ...
+                ]
+    """
+    f = open(filepath, 'r')
+    tups = []
+    lines = [ x for x in f ]
+    random.shuffle(lines)
+    for i, line in enumerate(lines):
+        split = line.split(' ')
+        path = split[0]
+        labels = np.array( [ float(x) for x in split[1:] ] )
+        tups.append((path, labels))
+        if (not stop < 0) and i >= stop-1:
+            break            
+    return tups
 
 class GridData_UB(InputData):
     def __init__(self, data,T,w=15,h=15):
@@ -345,7 +381,7 @@ class IzzyData_B(InputData):
         return list(batch[0]), list(batch[1])
 
 
-class AMTData(InputData):
+class IMData(InputData):
     
     def __init__(self, train_path, test_path,channels=1):
         self.train_tups = parse(train_path)

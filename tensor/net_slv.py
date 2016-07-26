@@ -20,11 +20,11 @@ class NetSLV(TensorNet):
 
     def __init__(self):
         self.dir = "./net6/"
-        self.name = "net6"
+        self.name = "slv_net"
         self.channels = 1
 
-        self.x = tf.placeholder('float', shape=[None, 250, 250, self.channels])
-        self.y_ = tf.placeholder("float", shape=[5, 4])
+        self.x = tf.placeholder('float', shape=[None,220, 220, self.channels])
+        self.y_ = tf.placeholder("float", shape=[None, 2])
 
 
         self.w_conv1 = self.weight_variable([11, 11, self.channels, 5])
@@ -62,8 +62,8 @@ class NetSLV(TensorNet):
         self.h_conv_flat = tf.reshape(self.h_conv1, [-1, conv_num_nodes])
         self.h_fc1 = tf.nn.relu(tf.matmul(self.h_conv_flat, self.w_fc1) + self.b_fc1)
 
-        self.w_fc2 = self.weight_variable([fc1_num_nodes, 4])
-        self.b_fc2 = self.bias_variable([4])
+        self.w_fc2 = self.weight_variable([fc1_num_nodes, 2])
+        self.b_fc2 = self.bias_variable([2])
 
         self.y_out = tf.tanh(tf.matmul(self.h_fc1, self.w_fc2) + self.b_fc2)
 

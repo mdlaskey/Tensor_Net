@@ -26,11 +26,7 @@ import logging
 import IPython
 #import Analysis from analysis
 import numpy as np
-try:
-    import options
-except:
-    options = None
-    pass
+from alan.lfd_slware.options import SLVOptions
 
 import os
 
@@ -44,13 +40,14 @@ class TensorNet():
 
     def save(self, sess, save_path=None):
         
-        self.log( "Saving..." )
+        print "Saving..." 
         saver = tf.train.Saver()
-        if not save_path:
-            model_name = self.name + "_" + datetime.datetime.now().strftime("%m-%d-%Y_%Hh%Mm%Ss") + ".ckpt"
-            save_path = '/media/1tb/Izzy/nets/' + model_name
+        
+        model_name = self.name + "_" + datetime.datetime.now().strftime("%m-%d-%Y_%Hh%Mm%Ss") + ".ckpt"
+        save_path = save_path + model_name
+        
         save_path = saver.save(sess, save_path)
-        self.log( "Saved model to " + save_path )
+        print "Saved model to "+save_path
         self.recent = save_path
         return save_path
 
@@ -73,7 +70,7 @@ class TensorNet():
         return sess
 
 
-    def optimize(self, iterations, data, unbiased=False, path=None, batch_size=100, test_print=20, save=False):
+    def optimize(self, iterations, data, unbiased=False, path=None, batch_size=100, test_print=20, save=True):
         """
             optimize net for [iterations]. path is either absolute or 
             relative to current working directory. data is InputData object (see class for details)
@@ -86,10 +83,7 @@ class TensorNet():
             self.sess = tf.Session()
             self.sess.run(tf.initialize_all_variables())
             
-        if options:
-            self.log_path = options.Options.tf_dir + self.dir + 'train.log'
-        else:
-            self.log_path = self.dir + 'train.log'
+        
         #logging.basicConfig(filename=log_path, level=logging.DEBUG)
         
         try:
@@ -107,16 +101,17 @@ class TensorNet():
                         feed_dict = { self.x: ims, self.y_: labels, self.weights: weights }
 
                     if i % 10 == 0:
-                        batch_loss = self.acc.eval(feed_dict=feed_dict)
+                        batch_loss = self.loss.eval(feed_dict=feed_dict)
                         
-                        self.log("[ Iteration " + str(i) + " ] Training loss: " + str(batch_loss))
+                        print "[ Iteration " + str(i) + " ] Training loss: " + str(batch_loss)
                         
                     if i % test_print == 0:
                         test_batch = data.next_test_batch()
                         test_ims, test_labels = test_batch
                         test_dict = { self.x: test_ims, self.y_: test_labels }
-                        #test_loss = self.acc.eval(feed_dict=test_dict)
-                        #self.log("[ Iteration " + str(i) + " ] Test loss: " + str(test_loss))
+
+                        test_loss = self.loss.eval(feed_dict=test_dict)
+                        print "[ Iteration " + str(i) + " ] Test loss: " + str(test_loss)
                     self.train.run(feed_dict=feed_dict)
 
 
@@ -134,11 +129,11 @@ class TensorNet():
      
         
         if save:
-            save_path = self.save(sess, save_path='/media/1tb/Izzy/nets/' + new_name)
+            save_path = self.save(self.sess, save_path=SLVOptions.policies_dir)
         else:
             save_path = None
         #self.sess.close()
-        self.log( "Optimization done." )
+        print "Optimization done." 
         return save_path
     
 
@@ -164,7 +159,7 @@ class TensorNet():
     def get_stats(self):
         return [self.test_loss, self.train_loss]
 
-    def output(self, sess, im,channels,clasfc = True):
+    def output(self, sess, im,channels):
         """
             accepts batch of 3d images, converts to tensor
             and returns four element list of controls
@@ -173,11 +168,7 @@ class TensorNet():
         shape = np.shape(im)
         im = np.reshape(im, (-1, shape[0], shape[1], shape[2]))
         with sess.as_default():
-            if(clasfc):
-                return inputdata.process_out(sess.run(self.y_out, feed_dict={self.x:im}) [0])
-
-            else:
-                return sess.run(self.y_out, feed_dict={self.x:im}) [0]
+            return sess.run(self.y_out, feed_dict={self.x:im}) [0]
 
 
 
