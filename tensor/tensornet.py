@@ -26,7 +26,8 @@ import logging
 import IPython
 #import Analysis from analysis
 import numpy as np
-from alan.lfd_slware.options import SLVOptions
+import math
+from alan.p_grasp_align.options import Grasp_AlignOptions as options
 
 import os
 
@@ -35,6 +36,7 @@ class TensorNet():
     def __init__(self):
         self.test_loss = 0
         self.train_loss = 0
+        self.Options = options()
         self.analysis = Analysis()
         raise NotImplementedError
 
@@ -52,6 +54,9 @@ class TensorNet():
         return save_path
 
 
+    def clean_up(self):
+        tf.reset_default_graph()
+        return 
 
     def load(self, var_path=None):
         """
@@ -77,7 +82,7 @@ class TensorNet():
             mini_batch_size as well
         """
         if path:
-            sess = self.load(var_path=path)
+            self.sess = self.load(var_path=path)
         else:
             print "Initializing new variables..."
             self.sess = tf.Session()
@@ -88,29 +93,28 @@ class TensorNet():
         
         try:
             with self.sess.as_default():
-                for i in range(iterations):
-                    if(not unbiased):
-                        batch = data.next_train_batch(batch_size)
-                        ims, labels = batch
+                for i in range(iterations):               
+                    batch = data.next_train_batch(batch_size)
+                    ims, labels = batch
                     
-                        feed_dict = { self.x: ims, self.y_: labels }
-                    else:
-                        batch = data.next_w_train_batch(batch_size,self,debug = False,resamp = i %50 == 0)
-                        ims, labels, weights = batch
-                    
-                        feed_dict = { self.x: ims, self.y_: labels, self.weights: weights }
+                    feed_dict = { self.x: ims, self.y_: labels }
 
                     if i % 10 == 0:
                         batch_loss = self.loss.eval(feed_dict=feed_dict)
-                        
+                    
+                        #print "TRAIN: X ERR "+ str(x_loss)+" Y ERR "+str(y_loss)
                         print "[ Iteration " + str(i) + " ] Training loss: " + str(batch_loss)
-                        
+                        if(math.isnan(batch_loss)):
+                            IPython.embed()
                     if i % test_print == 0:
                         test_batch = data.next_test_batch()
                         test_ims, test_labels = test_batch
                         test_dict = { self.x: test_ims, self.y_: test_labels }
 
                         test_loss = self.loss.eval(feed_dict=test_dict)
+                        
+                        
+                        #print "TEST: X ERR "+ str(x_loss)+" Y ERR "+str(y_loss)
                         print "[ Iteration " + str(i) + " ] Test loss: " + str(test_loss)
                     self.train.run(feed_dict=feed_dict)
 
@@ -129,7 +133,7 @@ class TensorNet():
      
         
         if save:
-            save_path = self.save(self.sess, save_path=SLVOptions.policies_dir)
+            save_path = self.save(self.sess, save_path= self.Options.policies_dir)
         else:
             save_path = None
         #self.sess.close()

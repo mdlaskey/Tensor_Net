@@ -406,7 +406,6 @@ class IMData(InputData):
         batch = []
         for path, labels in batch_tups:
             im = cv2.imread(path)
-         
             im = im2tensor(im,self.channels)
             batch.append((im, labels))
         batch = zip(*batch)
