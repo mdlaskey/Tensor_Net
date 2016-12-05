@@ -46,6 +46,10 @@ class TensorNet():
         saver = tf.train.Saver()
         
         model_name = self.name + "_" + datetime.datetime.now().strftime("%m-%d-%Y_%Hh%Mm%Ss") + ".ckpt"
+
+        if not os.path.exists(save_path):
+            os.makedirs(save_path)
+
         save_path = save_path + model_name
         
         save_path = saver.save(sess, save_path)

@@ -17,7 +17,7 @@ from tensornet import TensorNet
 import time
 import datetime
 
-class NetGrasp_Align(TensorNet):
+class Net_Hanoi(TensorNet):
 
     def __init__(self,options):
         self.dir = "./net6/"
@@ -25,7 +25,7 @@ class NetGrasp_Align(TensorNet):
         self.channels = 1
         self.Options = options
 
-        self.x = tf.placeholder('float', shape=[None,240,240,self.channels])
+        self.x = tf.placeholder('float', shape=[None,250,250,self.channels])
         self.y_ = tf.placeholder("float", shape=[None, 3])
 
 
